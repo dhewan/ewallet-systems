@@ -11,13 +11,7 @@ const config = {
   db_port: process.env.DB_PORT || 3306,
   db_name: process.env.DB_NAME || 'ewallet_systems_db',
   db_user: process.env.DB_USER || 'root',
-  db_pass: process.env.DB_PASS || '',
-
-  bearer_token: process.env.BEARER_TOKEN || 'token',
-  salt_pass: process.env.SALT_PASS || 'salt',
-  jwt_secret: process.env.JWT_SECRET || 'secret',
-
-  processName: process.env.name
+  db_pass: process.env.DB_PASS || ''
 }
 
 export default config

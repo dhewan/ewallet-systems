@@ -20,22 +20,11 @@ import walletValidation from '../validations/wallets/wallets.js'
 // ROUTINGS
 const walletRouter = express.Router()
 
-// Create wallet
 walletRouter.post('/', validate(walletValidation.createWallet), walletController.createUserWallet)
-
-// Top-up wallet
 walletRouter.post('/:id/topup', validate(walletValidation.topUp), walletController.topUp)
-
-// Pay from wallet
 walletRouter.post('/:id/pay', validate(walletValidation.pay), walletController.pay)
-
-// Transfer funds
 walletRouter.post('/transfer', validate(walletValidation.transfer), walletController.transfer)
-
-// Suspend wallet
 walletRouter.post('/:id/suspend', validate(walletValidation.suspend), walletController.suspend)
-
-// Get wallet status
 walletRouter.get('/:id', validate(walletValidation.getWalletDetails), walletController.getWalletDetails)
 
 export default {
