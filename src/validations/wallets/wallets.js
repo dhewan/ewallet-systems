@@ -3,7 +3,7 @@ import Joi from 'joi'
 const createWallet = {
   body: Joi.object().keys({
     userId: Joi.number().integer().required(),
-    currency: Joi.string().max(10).required()
+    currency: Joi.string().max(10).required().alphanum()
   })
 }
 
