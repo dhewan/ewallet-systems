@@ -800,7 +800,107 @@ Semua error mengikuti format standar:
 
 ---
 
-## 📁 Additional Documentation
+## � Implementation Assumptions
+
+This section documents key assumptions and design decisions made during implementation:
+
+### 1. Wallet Identification
+**Assumption:** Wallet IDs use format `user{userId}-{CURRENCY}` (e.g., `user1-USD`)
+- **Rationale:** Provides human-readable, collision-free identifiers without exposing sequential database IDs
+- **Alternative Considered:** Date-based format (`USD-120226`) - rejected due to potential collisions
+
+### 2. Idempotency Scope
+**Assumption:** Only top-up operations require idempotency keys via `code` field
+- **Rationale:** Top-ups typically come from payment gateways with automatic retry logic
+- **Alternative Considered:** All operations - rejected due to added complexity for user-initiated actions
+- **Implementation:** Transaction code stored in ledger, duplicate codes rejected with 400 error
+
+### 3. Concurrency Control
+**Assumption:** Pessimistic locking (`SELECT FOR UPDATE`) for critical operations
+- **Rationale:** Prevents race conditions at the cost of reduced concurrency
+- **Applied To:** Top-up, payment, and transfer operations
+- **Alternative Considered:** Optimistic locking - rejected due to higher failure rates under load
+
+### 4. Currency Support
+**Assumption:** Currency codes support up to 10 characters
+- **Rationale:** Supports standard ISO codes (3 chars) and allows future expansion (crypto tokens, custom currencies)
+- **Behavior:** Automatically converts to uppercase for consistency
+- **Alternative Considered:** Fixed 3 characters - rejected for lack of flexibility
+
+### 5. User Validation
+**Assumption:** Users must exist before wallet creation
+- **Rationale:** Prevents orphaned wallets and ensures referential integrity
+- **Implementation:** `getUserById()` service validates user existence before wallet creation
+- **Alternative Considered:** Auto-create users - rejected due to security concerns
+
+### 6. Transaction Amount Limits
+**Assumption:** Minimum transaction amount is 0.01
+- **Rationale:** Prevents spam and abuse with micro-transactions
+- **Validation:** Enforced via Joi schema with `min(0.01)`
+- **Alternative Considered:** No minimum - rejected due to potential abuse
+
+### 7. Suspended Wallet Behavior
+**Assumption:** Suspended wallets cannot perform ANY operations (top-up, payment, transfer)
+- **Rationale:** Complete freeze for security/fraud prevention
+- **Implementation:** All operations check `status === 'SUSPENDED'` before processing
+- **Alternative Considered:** Allow queries only - rejected for consistency
+
+### 8. Ledger Immutability
+**Assumption:** Ledger entries are append-only, never updated or deleted
+- **Rationale:** Maintains audit trail integrity for regulatory compliance
+- **Implementation:** No UPDATE/DELETE operations on ledger table
+- **Fields Tracked:** amount, before balance, after balance, transaction type, timestamp
+
+### 9. Decimal Precision
+**Assumption:** All monetary values use DECIMAL(20,2)
+- **Rationale:** 2 decimal places sufficient for fiat currencies, 20 digits total handles balances up to 999 quadrillion
+- **Storage:** Database uses DECIMAL, API returns JavaScript number
+- **Rounding:** All amounts rounded to 2 decimals via `formatDecimal()` helper
+
+### 10. Transfer Parameters
+**Assumption:** Transfer endpoint uses string `walletId` instead of integer database IDs
+- **Rationale:** Consistency with other endpoints, better security (no sequential ID exposure)
+- **Format:** `fromWalletId` and `targetWalletId` both use `user{userId}-{CURRENCY}` format
+- **Alternative Considered:** Integer IDs - rejected for consistency
+
+### 11. Error Response Structure
+**Assumption:** All API responses follow consistent `{status, code, message, data}` structure
+- **Rationale:** Simplifies client-side error handling and parsing
+- **Success:** `status: "success"`, `data: {...}`
+- **Error:** `status: "error"`, `data: null`, descriptive `message`
+
+### 12. Database Transaction Isolation
+**Assumption:** Using MySQL default isolation level (REPEATABLE READ)
+- **Rationale:** Balances consistency requirements with performance
+- **Row Locking:** Additional pessimistic locking for critical operations
+- **Alternative Considered:** SERIALIZABLE - rejected due to performance impact
+
+### 13. Balance Display Format
+**Assumption:** JSON responses return numbers without trailing zeros
+- **Rationale:** Standard JavaScript number behavior (100 not 100.00)
+- **Database:** Stores with full precision DECIMAL(20,2)
+- **Frontend:** Can use `toFixed(2)` or `formatBalance()` helper for display
+
+### 14. Multi-Currency Support
+**Assumption:** Each user can have multiple wallets, but only one per currency
+- **Rationale:** Simplifies balance management while supporting multi-currency
+- **Validation:** Enforced in `createWallet()` service
+- **Transfer Rule:** Only same-currency transfers allowed
+
+### 15. Auto-Generated Transaction IDs
+**Assumption:** System generates transaction IDs using timestamp format
+- **Rationale:** Simple, unique, chronologically sortable
+- **Format:** `TXN-{timestamp}` for system-generated, custom for top-up (idempotency)
+- **Alternative Considered:** UUID - rejected for readability
+
+### 16. Security 
+**Assumption:** System generates transaction IDs using timestamp format
+- **Rationale:** Simple, unique, chronologically sortable
+- **Format:** `TXN-{timestamp}` for system-generated, custom for top-up (idempotency)
+- **Alternative Considered:** UUID - rejected for readability
+---
+
+## �📁 Additional Documentation
 
 Complete documentation available in `docs/` folder:
 - [API_WALLET.md](docs/API_WALLET.md) - Complete API documentation
