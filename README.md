@@ -105,8 +105,10 @@ npx sequelize-cli db:create
 # Run migrations
 npx sequelize-cli db:migrate
 
-# (Optional) Run seeders
+# (Optional) Run seeders to populate test users
 npx sequelize-cli db:seed:all
+# This will create 3 demo users: Brandon (id:1), Jonas (id:2), Kane (id:3)
+# Use these user IDs when creating wallets via API
 ```
 
 ## Running the Application
@@ -153,7 +155,7 @@ Base URL: `http://localhost:3000`
 
 ### 1. Create Wallet
 
-Create a new wallet for a user with specific currency.
+Create a new wallet for a user with specific currency (User already in seeder, if not have user seed or create first).
 
 **Endpoint:** `POST /wallet`
 
@@ -205,12 +207,6 @@ Create a new wallet for a user with specific currency.
 curl -X POST http://localhost:3000/wallet \
   -H "Content-Type: application/json" \
   -d '{"userId": 1, "currency": "USD"}'
-```
-
-**PowerShell Example:**
-```powershell
-$body = @{ userId = 1; currency = "USD" } | ConvertTo-Json
-Invoke-RestMethod -Uri "http://localhost:3000/wallet" -Method Post -ContentType "application/json" -Body $body
 ```
 
 ---
@@ -274,12 +270,6 @@ Add balance to wallet.
 curl -X POST http://localhost:3000/wallet/user1-USD/topup \
   -H "Content-Type: application/json" \
   -d '{"amount": 1000.00, "code": "TXN-TOP-12345"}'
-```
-
-**PowerShell Example:**
-```powershell
-$body = @{ amount = 1000.00; code = "TXN-TOP-12345" } | ConvertTo-Json
-Invoke-RestMethod -Uri "http://localhost:3000/wallet/user1-USD/topup" -Method Post -ContentType "application/json" -Body $body
 ```
 
 ---
@@ -894,8 +884,8 @@ This section documents key assumptions and design decisions made during implemen
 - **Alternative Considered:** UUID - rejected for readability
 
 ### 16. Security 
-**Assumption:** System generates transaction IDs using timestamp format
-- **Rationale:** Simple, unique, chronologically sortable
+**Assumption:** This app is secure from another risk
+- **Rationale:** Just for direct API
 - **Format:** `TXN-{timestamp}` for system-generated, custom for top-up (idempotency)
 - **Alternative Considered:** UUID - rejected for readability
 ---
@@ -906,185 +896,6 @@ Complete documentation available in `docs/` folder:
 - [API_WALLET.md](docs/API_WALLET.md) - Complete API documentation
 - [API_TEST_EXAMPLES.md](docs/API_TEST_EXAMPLES.md) - Testing examples with curl & PowerShell
 - [ROUTES_SUMMARY.md](ROUTES_SUMMARY.md) - Routes summary and implementation
-
----
-
-## 🤝 Contributing
-
-1. Fork repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open Pull Request
-
-**Coding Standards:**
-- Follow ESLint configuration
-- Run `npm run lint:fix` before commit
-- Write tests for new features
-- Update documentation
-
----
-
-## 📝 License
-
-ISC
-
----
-
-## 👨‍💻 Development Notes
-
-### Logging
-- Application uses `morgan` for HTTP request logging
-- Global error handler in [src/middlewares/error.js](src/middlewares/error.js)
-
-### Helper Utilities
-
-**formatDecimal(number, decimal = 2)**
-```javascript
-import { formatDecimal } from './utils/helpers.js'
-
-const amount = formatDecimal(100.567, 2)  // Returns: 100.57 (number)
-const balance = formatDecimal(1000, 2)    // Returns: 1000 (number, not 1000.00)
-```
-- Memformat angka ke jumlah desimal tertentu
-- Return type: Number (bukan string)
-- Digunakan di models untuk getter `balance`, `amount`, `before`, `after`
-
-**formatBalance(value, maxDecimal = 2)**  
-```javascript
-import { formatBalance } from './utils/helpers.js'
-
-const display = formatBalance(1000.50, 2)  // Returns: "1,000.5" (string)
-const display2 = formatBalance(100, 2)     // Returns: "100" (string)
-```
-- Format numbers with locale-based formatting
-- Return type: String
-- For display purposes, not for calculations
-
-**catchAsync(fn)**
-```javascript
-import { catchAsync } from './utils/helpers.js'
-
-const myController = catchAsync(async (req, res) => {
-  // Your async code here
-  // Errors will be automatically caught and passed to error middleware
-})
-```
-- Wrapper for async functions in controllers
-- Automatically catches errors and passes to error middleware
-
-### Service Layer Architecture
-
-System uses service layer pattern to separate business logic from controllers, improving reusability and testability.
-
-**Wallet Services** ([src/services/wallets.js](src/services/wallets.js))
-
-Provides functions for wallet operations:
-
-- `getWalletByWalletId(walletId)` 
-  - Get wallet by string walletId
-  - Returns: Wallet object or error { code, error }
-  - Used by: topUp, pay, transfer, suspend, getWalletDetails
-
-- `getWalletByOwnerAndCurrency(ownerId, currency)` 
-  - Find wallet by owner and currency combination
-  - Returns: Wallet object or error { code, error }
-  - Used by: Internal validations
-
-- `createWallet({ ownerId, currency })` 
-  - Create new wallet with duplicate validation
-  - Auto-uppercase currency code
-  - Generate walletId with format: `user{ownerId}-{CURRENCY}`
-  - Returns: Wallet object or error { code, error }
-  - Used by: createUserWallet controller
-
-- `updateWalletBalance(id, newBalance, transaction)` 
-  - Update wallet balance in database transaction
-  - Params: database id (integer), newBalance (decimal), transaction object
-  - Used by: topUp, pay, transfer
-
-**User Services** ([src/services/users.js](src/services/users.js))
-
-Provides functions for user operations:
-
-- `getUserById(id)` 
-  - Validate user existence before wallet creation
-  - Returns: User object or error { code: 404, error: 'User not found.' }
-  - Used by: createUserWallet controller
-
-**Service Layer Benefits:**
-- ✅ Reusable business logic
-- ✅ Easier to test independently
-- ✅ Consistent error handling
-- ✅ Better separation of concerns
-- ✅ Transaction support
-
-### Database Management
-```powershell
-# Create new migration
-npx sequelize-cli migration:generate --name migration-name
-
-# Undo last migration
-npx sequelize-cli db:migrate:undo
-
-# Reset database
-npx sequelize-cli db:migrate:undo:all
-npx sequelize-cli db:migrate
-```
-
-### Testing
-
-**Running Tests:**
-```powershell
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm test -- --watch
-
-# Run tests with coverage
-npm test -- --coverage
-```
-
-**Test Structure:**
-```
-test/
-├── services/
-│   ├── wallets.test.js    # Unit tests for wallet services
-│   └── users.test.js      # Unit tests for user services
-└── README.md              # Testing documentation
-```
-
-**Testing Framework:**
-- **Jest** - Testing framework
-- Unit tests for service layer (wallets & users)
-- Mocking with `@jest/globals`
-- Coverage reporting
-- Comprehensive test cases for all service functions
-
-**Writing Tests:**
-```javascript
-import { jest, describe, it, expect } from '@jest/globals'
-import * as walletService from '../../src/services/wallets.js'
-
-describe('Wallet Service', () => {
-  it('should create wallet successfully', async () => {
-    // Your test here
-  })
-})
-```
-
-**Test Coverage:**
-- ✅ Wallet Services (`wallets.test.js`)
-  - `getWalletByWalletId()` - Success & error cases
-  - `getWalletByOwnerAndCurrency()` - Success & error cases
-  - `createWallet()` - Duplicate check, auto-uppercase, walletId format
-  - `updateWalletBalance()` - Transaction support
-- ✅ User Services (`users.test.js`)
-  - `getUserById()` - Success, error 404, database error handling
-
-### Environment Variables
-Make sure all environment variables in `.env` are configured correctly before running the application.
 
 ---
 
