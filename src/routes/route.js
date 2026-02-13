@@ -21,11 +21,11 @@ import walletValidation from '../validations/wallets/wallets.js'
 const walletRouter = express.Router()
 
 walletRouter.post('/', validate(walletValidation.createWallet), walletController.createUserWallet)
-walletRouter.post('/:id/topup', validate(walletValidation.topUp), walletController.topUp)
-walletRouter.post('/:id/pay', validate(walletValidation.pay), walletController.pay)
+walletRouter.post('/:walletId/topup', validate(walletValidation.topUp), walletController.topUp)
+walletRouter.post('/:walletId/pay', validate(walletValidation.pay), walletController.pay)
 walletRouter.post('/transfer', validate(walletValidation.transfer), walletController.transfer)
-walletRouter.post('/:id/suspend', validate(walletValidation.suspend), walletController.suspend)
-walletRouter.get('/:id', validate(walletValidation.getWalletDetails), walletController.getWalletDetails)
+walletRouter.post('/:walletId/suspend', validate(walletValidation.suspend), walletController.suspend)
+walletRouter.get('/:walletId', validate(walletValidation.getWalletDetails), walletController.getWalletDetails)
 
 export default {
   walletRouter

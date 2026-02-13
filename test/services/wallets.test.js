@@ -33,7 +33,7 @@ describe('Wallet Service', () => {
     jest.useRealTimers()
   })
 
-  describe('getWalletById', () => {
+  describe('getWalletByWalletId', () => {
     it('should return wallet when found', async () => {
       // Arrange
       const mockWallet = {
@@ -41,17 +41,47 @@ describe('Wallet Service', () => {
         ownerId: 100,
         currency: 'USD',
         balance: 1000,
-        walletId: 'USD-120226'
+        walletId: 'user100-USD'
       }
       mockFindOne.mockResolvedValue(mockWallet)
 
       // Act
-      const result = await walletService.getWalletById(1)
+      const result = await walletService.getWalletByWalletId('user100-USD')
 
       // Assert
       expect(result).toEqual(mockWallet)
       expect(mockFindOne).toHaveBeenCalledTimes(1)
-      expect(mockFindOne).toHaveBeenCalledWith({ where: { id: 1 } })
+      expect(mockFindOne).toHaveBeenCalledWith({
+        where: { walletId: 'user100-USD' },
+        transaction: undefined,
+        lock: undefined
+      })
+    })
+
+    it('should return wallet with transaction and lock when provided', async () => {
+      // Arrange
+      const mockWallet = {
+        id: 1,
+        ownerId: 100,
+        currency: 'USD',
+        balance: 1000,
+        walletId: 'user100-USD'
+      }
+      const mockTransaction = { id: 'txn-123' }
+      const mockLock = 'UPDATE'
+      mockFindOne.mockResolvedValue(mockWallet)
+
+      // Act
+      const result = await walletService.getWalletByWalletId('user100-USD', mockTransaction, mockLock)
+
+      // Assert
+      expect(result).toEqual(mockWallet)
+      expect(mockFindOne).toHaveBeenCalledTimes(1)
+      expect(mockFindOne).toHaveBeenCalledWith({
+        where: { walletId: 'user100-USD' },
+        transaction: mockTransaction,
+        lock: mockLock
+      })
     })
 
     it('should return error object with 404 code when wallet not found', async () => {
@@ -59,7 +89,7 @@ describe('Wallet Service', () => {
       mockFindOne.mockResolvedValue(null)
 
       // Act
-      const result = await walletService.getWalletById(999)
+      const result = await walletService.getWalletByWalletId('user999-USD')
 
       // Assert
       expect(result).toEqual({
@@ -67,7 +97,11 @@ describe('Wallet Service', () => {
         code: 404
       })
       expect(mockFindOne).toHaveBeenCalledTimes(1)
-      expect(mockFindOne).toHaveBeenCalledWith({ where: { id: 999 } })
+      expect(mockFindOne).toHaveBeenCalledWith({
+        where: { walletId: 'user999-USD' },
+        transaction: undefined,
+        lock: undefined
+      })
     })
   })
 
@@ -79,7 +113,7 @@ describe('Wallet Service', () => {
         ownerId: 200,
         currency: 'IDR',
         balance: 50000,
-        walletId: 'IDR-120226'
+        walletId: 'user200-IDR'
       }
       mockFindOne.mockResolvedValue(mockWallet)
 
@@ -145,14 +179,10 @@ describe('Wallet Service', () => {
         id: 15,
         ownerId: 400,
         currency: 'USD',
-        walletId: 'USD-130226',
+        walletId: 'user400-USD',
         balance: 0
       }
       mockCreate.mockResolvedValue(createdWallet)
-
-      // Set fixed date for consistent wallet ID generation
-      jest.useFakeTimers()
-      jest.setSystemTime(new Date('2026-02-13T10:30:00Z'))
 
       // Act
       const result = await walletService.createWallet({
@@ -169,45 +199,44 @@ describe('Wallet Service', () => {
       expect(createCallArgs).toEqual({
         ownerId: 400,
         currency: 'USD',
-        walletId: expect.stringMatching(/^USD-\d{6}$/)
+        walletId: 'user400-USD'
       })
     })
 
-    it('should generate correct wallet ID format with lowercase currency', async () => {
+    it('should auto-uppercase currency code when creating wallet', async () => {
       // Arrange
       mockFindOne.mockResolvedValue(null)
       const createdWallet = {
         id: 20,
         ownerId: 500,
-        currency: 'idr',
-        walletId: 'IDR-130226'
+        currency: 'IDR',
+        walletId: 'user500-IDR'
       }
       mockCreate.mockResolvedValue(createdWallet)
 
-      jest.useFakeTimers()
-      jest.setSystemTime(new Date('2026-02-13T10:30:00Z'))
-
       // Act
-      await walletService.createWallet({
+      const result = await walletService.createWallet({
         ownerId: 500,
-        currency: 'idr'
+        currency: 'idr' // lowercase input
       })
 
       // Assert
+      expect(result).toEqual(createdWallet)
       const createCallArgs = mockCreate.mock.calls[0][0]
-      expect(createCallArgs.walletId).toMatch(/^IDR-\d{6}$/)
-      expect(createCallArgs.walletId).toBe('IDR-130226')
+      expect(createCallArgs.currency).toBe('IDR') // uppercase in database
+      expect(createCallArgs.walletId).toBe('user500-IDR')
     })
 
-    it('should generate wallet ID with correct date format (DDMMYY)', async () => {
+    it('should generate correct wallet ID format: user{ownerId}-{CURRENCY}', async () => {
       // Arrange
       mockFindOne.mockResolvedValue(null)
-      mockCreate.mockResolvedValue({ id: 25 })
-
-      // Test date format generation - using local date
-      jest.useFakeTimers()
-      const testDate = new Date(2026, 11, 31, 12, 0, 0) // Month is 0-indexed, so 11 = December
-      jest.setSystemTime(testDate)
+      const createdWallet = {
+        id: 25,
+        ownerId: 600,
+        currency: 'EUR',
+        walletId: 'user600-EUR'
+      }
+      mockCreate.mockResolvedValue(createdWallet)
 
       // Act
       await walletService.createWallet({
@@ -217,9 +246,8 @@ describe('Wallet Service', () => {
 
       // Assert
       const createCallArgs = mockCreate.mock.calls[0][0]
-      // Should match format: CURRENCY-DDMMYY
-      expect(createCallArgs.walletId).toMatch(/^EUR-\d{6}$/)
-      expect(createCallArgs.walletId).toBe('EUR-311226') // day(31) month(12) year(26)
+      expect(createCallArgs.walletId).toBe('user600-EUR')
+      expect(createCallArgs.walletId).toMatch(/^user\d+-[A-Z]+$/)
     })
   })
 

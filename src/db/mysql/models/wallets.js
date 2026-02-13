@@ -1,5 +1,7 @@
 'use strict'
 
+import { formatDecimal } from '../../../utils/helpers.js'
+
 const Model = (sequelize, DataTypes) => {
   const Wallets = sequelize.define('Wallets', {
     id: {
@@ -29,8 +31,13 @@ const Model = (sequelize, DataTypes) => {
       defaultValue: 0,
       get () {
         const rawValue = this.getDataValue('balance')
-        return parseFloat(rawValue)
+        return formatDecimal(rawValue, 2)
       }
+    },
+    status: {
+      allowNull: false,
+      type: DataTypes.ENUM('ACTIVE', 'SUSPENDED'),
+      defaultValue: 'ACTIVE'
     },
     createdAt: {
       allowNull: false,

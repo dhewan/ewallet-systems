@@ -73,6 +73,10 @@ export const formatDecimal = (number, decimal = 2) => {
   return num
 }
 
+export const formatBalance = (value = 0, maxDecimal = 2) => {
+  return value?.toLocaleString('en-EN', { minimumFractionDigits: 0, maximumFractionDigits: maxDecimal })
+}
+
 export const delay = (ms) => {
 // MILISECOND DELAY
   return new Promise(resolve => setTimeout(resolve, ms))

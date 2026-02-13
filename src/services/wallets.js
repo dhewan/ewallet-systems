@@ -2,8 +2,8 @@ import db from '../db/mysql/models/index.js'
 
 const { Wallets } = db
 
-export const getWalletById = async (id) => {
-  const wallet = await Wallets.findOne({ where: { id } })
+export const getWalletByWalletId = async (walletId, transaction, lock) => {
+  const wallet = await Wallets.findOne({ where: { walletId }, transaction, lock })
   if (!wallet) {
     return {
       error: 'Wallet not found.',
@@ -24,7 +24,8 @@ export const getWalletByOwnerAndCurrency = async (ownerId, currency) => {
   return wallet
 }
 
-export const createWallet = async ({ ownerId, currency }) => {
+export const createWallet = async ({ ownerId, currency: rawCurrency }) => {
+  const currency = rawCurrency.toUpperCase()
   const ownerHaveWallet = await Wallets.findOne({ where: { ownerId, currency } })
   if (ownerHaveWallet) {
     return {
@@ -32,15 +33,11 @@ export const createWallet = async ({ ownerId, currency }) => {
       code: 400
     }
   }
-  const date = new Date()
-  const year = date.getFullYear().toString().slice(-2)
-  const month = (`0${date.getMonth() + 1}`).slice(-2)
-  const day = (`0${date.getDate()}`).slice(-2)
 
   const wallet = await Wallets.create({
     ownerId,
     currency,
-    walletId: `${currency.toUpperCase()}-${day}${month}${year}`
+    walletId: `user${ownerId}-${currency}`
   })
 
   return wallet

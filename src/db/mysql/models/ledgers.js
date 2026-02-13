@@ -1,5 +1,7 @@
 'use strict'
 
+import { formatDecimal } from '../../../utils/helpers.js'
+
 const Model = (sequelize, DataTypes) => {
   const Ledgers = sequelize.define('Ledgers', {
     id: {
@@ -30,7 +32,7 @@ const Model = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(20, 2),
       get () {
         const rawValue = this.getDataValue('amount')
-        return parseFloat(rawValue)
+        return formatDecimal(rawValue, 2)
       }
     },
     before: {
@@ -38,7 +40,7 @@ const Model = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(20, 2),
       get () {
         const rawValue = this.getDataValue('before')
-        return parseFloat(rawValue)
+        return formatDecimal(rawValue, 2)
       }
     },
     after: {
@@ -46,7 +48,7 @@ const Model = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(20, 2),
       get () {
         const rawValue = this.getDataValue('after')
-        return parseFloat(rawValue)
+        return formatDecimal(rawValue, 2)
       }
     },
     description: {
