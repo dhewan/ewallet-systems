@@ -851,7 +851,6 @@ This section documents key assumptions and design decisions made during implemen
 **Assumption:** Transfer endpoint uses string `walletId` instead of integer database IDs
 - **Rationale:** Consistency with other endpoints, better security (no sequential ID exposure)
 - **Format:** `fromWalletId` and `targetWalletId` both use `user{userId}-{CURRENCY}` format
-- **Alternative Considered:** Integer IDs - rejected for consistency
 
 ### 11. Error Response Structure
 **Assumption:** All API responses follow consistent `{status, code, message, data}` structure
@@ -863,7 +862,6 @@ This section documents key assumptions and design decisions made during implemen
 **Assumption:** Using MySQL default isolation level (REPEATABLE READ)
 - **Rationale:** Balances consistency requirements with performance
 - **Row Locking:** Additional pessimistic locking for critical operations
-- **Alternative Considered:** SERIALIZABLE - rejected due to performance impact
 
 ### 13. Balance Display Format
 **Assumption:** JSON responses return numbers without trailing zeros
@@ -881,13 +879,10 @@ This section documents key assumptions and design decisions made during implemen
 **Assumption:** System generates transaction IDs using timestamp format
 - **Rationale:** Simple, unique, chronologically sortable
 - **Format:** `TXN-{timestamp}` for system-generated, custom for top-up (idempotency)
-- **Alternative Considered:** UUID - rejected for readability
 
 ### 16. Security 
 **Assumption:** This app is secure from another risk
 - **Rationale:** Just for direct API
-- **Format:** `TXN-{timestamp}` for system-generated, custom for top-up (idempotency)
-- **Alternative Considered:** UUID - rejected for readability
 ---
 
 ## �📁 Additional Documentation
